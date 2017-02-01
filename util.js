@@ -59,7 +59,8 @@
 
             return {
                 components: components,
-                distance: stations.length > 0 ? self.getDistance(components) : 0,
+                distance: self.getDistance(components),
+                distanceWithWeight: self.getDistanceWithWeight(components),
                 freeDistance: self.getFreeDistance(components)
             };
         },
@@ -121,7 +122,8 @@
 
             return {
                 components: components,
-                distance: self.getDistance(components)
+                distance: self.getDistance(components),
+                distanceWithWeight: self.getDistanceWithWeight(components)
             };
         },
 
@@ -160,6 +162,23 @@
 
                 points.forEach(function (point) {
                     distance += self.getDistanceBetweenTwoPoints(station, point);
+                });
+            });
+
+            return distance;
+        },
+
+        getDistanceWithWeight: function(components) {
+            var self = this;
+
+            var distance = 0;
+
+            components.forEach(function (component) {
+                var station = component.station;
+                var points = component.points;
+
+                points.forEach(function (point) {
+                    distance += self.getDistanceBetweenTwoPoints(station, point) * ((point.size > 0) ? point.size : 1);
                 });
             });
 

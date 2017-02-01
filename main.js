@@ -26,8 +26,8 @@ function process() {
     util.setNumericProperties(stations, ['latitude', 'longitude', 'x', 'y']);
     util.scaleCoordinates(stations, 0, canvas.width, canvas.height);
 
-    var iterations = 20;
-    var minClusters = 10, maxClusters = 15;
+    var iterations = 10;
+    var minClusters = 5, maxClusters = 15;
     var kmeansComponents = [];
     var projectionComponents = [];
 

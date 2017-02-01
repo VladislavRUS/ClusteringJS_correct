@@ -1,5 +1,6 @@
 (function () {
     this.util = {
+        algorithmIterationsNumber: 50,
         kmeans: function (k, volumes, stations) {
             var self = this;
 
@@ -17,7 +18,7 @@
 
             var clusters = {};
 
-            while (cnt < 50) {
+            while (cnt < this.algorithmIterationsNumber) {
                 cnt++;
                 clusters = {};
 
@@ -81,7 +82,7 @@
             var cnt = 0;
             var clusters = {};
 
-            while (cnt < 50) {
+            while (cnt < this.algorithmIterationsNumber) {
                 cnt++;
                 clusters = {};
 
@@ -208,9 +209,11 @@
                 massSum = 0;
 
             for (var i = 0; i < arr.length; i++) {
-                xSum += arr[i].x;
-                ySum += arr[i].y;
-                massSum += 1;
+                var size = arr[i].size > 0 ? arr[i].size : 1;
+
+                xSum += arr[i].x * size;
+                ySum += arr[i].y * size;
+                massSum += size;
             }
 
             return {

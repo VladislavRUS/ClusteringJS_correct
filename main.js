@@ -3,7 +3,7 @@ function getData(dataName) {
     xhr.open('GET', dataName, false);
     xhr.send();
     if (xhr.status != 200) {
-        alert( xhr.status + ': ' + xhr.statusText );
+        alert(xhr.status + ': ' + xhr.statusText);
         throw new Error(xhr.statusText);
 
     } else {
@@ -26,45 +26,236 @@ function process() {
     util.setNumericProperties(stations, ['latitude', 'longitude', 'x', 'y']);
     util.scaleCoordinates(stations, 0, canvas.width, canvas.height);
 
-    var iterations = 10;
-    var minClusters = 5, maxClusters = 15;
-    var kmeansComponents = [];
-    var projectionComponents = [];
+    var iterations = 20;
+    var minClusters = 1, maxClusters = 20;
+    var kmeansResults = [];
+    var projectionResults = [];
+    var minPrice = 0, maxPrice = 1000;
 
-    for (var k = minClusters; k < maxClusters; k++) {
+    var price = 0;
 
-        for (var i = 0; i < iterations; i++) {
-            var c1;
+    var km = true;
 
-            do {
-                c1 = util.kmeans(k, copy(volumes), copy(stations));
-            } while (c1.components.length != k);
+    for (var k = minClusters; k <= maxClusters; k++) {
+        //if (km) {
+            for (var i = 0; i < iterations; i++) {
+                var c1;
 
-            kmeansComponents.push(copy(c1));
+                do {
+                    c1 = util.kmeans(k, copy(volumes), copy(stations), price);
+                } while (c1.components.length != k);
 
-            if (i % 10 == 0)
-                console.log('kmeans: ', k);
-        }
+                kmeansResults.push(copy(c1));
 
-        for (var i = 0; i < iterations; i++) {
-            var c2;
-            do {
-                c2 = util.projection(k, copy(volumes), copy(stations));
-            } while (c2.components.length != k);
-            projectionComponents.push(copy(c2));
+                console.log('kmeans: ' + k);
+            }
+        //} else {
+            for (var i = 0; i < iterations; i++) {
+                var c2;
+                do {
+                    c2 = util.projection(k, copy(volumes), copy(stations), price);
+                } while (c2.components.length != k);
+                projectionResults.push(copy(c2));
 
-            if (i % 10 == 0)
-                console.log('projection: ', k);
-        }
+                console.log('projection: ' + k);
+            }
+       // }
     }
 
-    console.log('K-MEANS');
-    logTheBest(kmeansComponents);
 
-    console.log();
+    /*kmeansResults = setAverage(kmeansResults, iterations);
+    projectionResults = setAverage(projectionResults, iterations);
+    createChartWithPrice(kmeansResults, projectionResults, price);*/
 
-    console.log('PROJECTION');
-    logTheBest(projectionComponents);
+    createChartWithoutWeight(kmeansResults, projectionResults);
+    //createChartWithWeight(kmeansResults, projectionResults);
+
+    //forChart('K-MEANS', kmeansComponents);
+    //forChart('PROJECTION', projectionComponents);
+    /*
+     if (km) {
+     append('K-MEANS', true);
+     logTheBest(kmeansResults);
+
+     } else {
+     append('PROJECTION', true);
+     logTheBest(projectionResults);
+     }*/
+}
+
+function logWithPrice() {
+
+}
+
+function setAverage(results, iterations) {
+    var arr = [];
+
+    while (results.length > 0) {
+        var chunk = results.splice(0, iterations);
+
+        var averageDistance = countAverage(chunk, 'distance'),
+            averagePrice = countAverage(chunk, 'price'),
+            averageDistanceWithWeight = countAverage(chunk, 'distanceWithWeight');
+
+        arr.push({
+            price: averagePrice,
+            distance: averageDistance,
+            distanceWithWeight: averageDistanceWithWeight,
+            numberOfClusters: chunk[0].numberOfClusters
+        });
+    }
+
+    return arr;
+}
+
+function getRandomColor() {
+    var letters = '0123456789ABCDEF';
+    var color = '#';
+    for (var i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * 16)];
+    }
+    return color;
+}
+
+
+function countChunkAverage(chunk, prop) {
+    var sum = 0;
+    for (var i = 0; i < chunk.length; i++) {
+        sum += chunk[i][prop];
+    }
+
+    return Math.floor(sum / chunk.length);
+}
+
+function forChart(algo, components) {
+    append(algo, true);
+    append('Number of clusters', true);
+    components.forEach(function (collection) {
+        append(collection.components.length + ' ', false);
+    });
+    append('Distance', true);
+    components.forEach(function (collection) {
+        append(collection.distance + ' ', false);
+    });
+}
+
+function createChartWithPrice(kmeansResults, projectionResults, price) {
+    var trace1 = {
+        x: kmeansResults.map(function (result) {
+            return result.numberOfClusters;
+        }),
+        y: kmeansResults.map(function (result) {
+            return result.distance;
+        }),
+        name: 'K-Means, average cost ' + countAverage(kmeansResults, 'distance'),
+        type: 'scatter'
+    };
+
+    var trace2 = {
+        x: projectionResults.map(function (result) {
+            return result.numberOfClusters;
+        }),
+        y: projectionResults.map(function (result) {
+            return result.distance;
+        }),
+        name: 'Projection, average cost ' + countAverage(projectionResults, 'distance'),
+        type: 'scatter'
+    };
+
+    var layout = {
+        title: 'Total cost, price: ' + price,
+        xaxis: {
+            title: 'Number of clusters'
+        },
+        yaxis: {
+            title: 'Cost'
+        }
+    };
+
+    Plotly.newPlot('chartWithoutWeight', [trace1, trace2], layout);
+}
+
+function createChartWithoutWeight(kmeansResults, projectionResults) {
+    var trace0 = {
+        x: kmeansResults.map(function (result) {
+            return result.numberOfClusters;
+        }),
+        y: kmeansResults.map(function (result) {
+            return result.freeDistance;
+        }),
+        name: 'Free, average: ' + countAverage(kmeansResults, 'freeDistance'),
+        type: 'scatter'
+    };
+
+    var trace1 = {
+        x: kmeansResults.map(function (result) {
+            return result.numberOfClusters;
+        }),
+        y: kmeansResults.map(function (result) {
+            return result.distance;
+        }),
+        name: 'K-Means, average: ' + countAverage(kmeansResults, 'distance'),
+        type: 'scatter'
+    };
+
+    var trace2 = {
+        x: projectionResults.map(function (result) {
+            return result.numberOfClusters;
+        }),
+        y: projectionResults.map(function (result) {
+            return result.distance;
+        }),
+        name: 'Projection, average: ' + countAverage(projectionResults, 'distance'),
+        type: 'scatter'
+    };
+
+    var layout = {
+        title: 'Distance without weight',
+        xaxis: {
+            title: 'Number of clusters'
+        },
+        yaxis: {
+            title: 'Distance'
+        }
+    };
+
+    Plotly.newPlot('chartWithoutWeight', [trace0, trace1, trace2], layout);
+}
+
+function createChartWithWeight(kmeansResults, projectionResults) {
+    var trace1 = {
+        x: kmeansResults.map(function (result) {
+            return result.numberOfClusters;
+        }),
+        y: kmeansResults.map(function (result) {
+            return result.distanceWithWeight;
+        }),
+        name: 'K-Means, average: ' + countAverage(kmeansResults, 'distanceWithWeight'),
+        type: 'scatter'
+    };
+
+    var trace2 = {
+        x: projectionResults.map(function (result) {
+            return result.numberOfClusters;
+        }),
+        y: projectionResults.map(function (result) {
+            return result.distanceWithWeight;
+        }),
+        name: 'Projection, average: ' + countAverage(projectionResults, 'distanceWithWeight'),
+        type: 'scatter'
+    };
+
+    var layout = {
+        title: 'Distance with weight',
+        xaxis: {
+            title: 'Number of clusters'
+        },
+        yaxis: {
+            title: 'Distance'
+        }
+    };
+
+    Plotly.newPlot('chartWithWeight', [trace1, trace2], layout);
 }
 
 function logTheBest(divisions) {
@@ -79,22 +270,41 @@ function logTheBest(divisions) {
 
     var bestComponents = divisions[bestIdx];
 
-    console.log('Number of clusters: ' + bestComponents.components.length);
-    console.log('Distance: ' + bestComponents.distance);
-    console.log('Distance with weight: ' + bestComponents.distanceWithWeight);
+
+    append('Number of clusters: ' + bestComponents.components.length, true);
+    append('Distance: ' + bestComponents.distance, true);
+    append('Distance with weight: ' + bestComponents.distanceWithWeight, true);
 
     for (var i = 0; i < bestComponents.components.length; i++) {
         var component = bestComponents.components[i];
 
-        console.log('Number: ' + i);
-        console.log('Station: ', component.station);
-        //console.log('Точки: ');
+        append('Number: ' + i, true);
+
+        for (var prop in component.station) {
+            append(prop + ' ' + component.station[prop], false);
+            append(', ', false);
+        }
+
+        append('', true);
         /*for (var j = 0; j < component.points.length; j++) {
-            console.log(component.points[j]);
-        }*/
+         append(JSON.stringify(component.points[j]), true);
+         }*/
     }
 
+    drawComponents(bestComponents.components);
+
 }
+
+function replace(text) {
+    document.getElementById('info').innerHTML = text;
+}
+
+function append(text, block) {
+    var elem = block ? document.createElement('div') : document.createElement('span');
+    elem.innerHTML = text;
+    document.getElementById('info').appendChild(elem);
+}
+
 function countAverage(componentsArr, prop) {
     var averageDistance = 0;
 
@@ -109,22 +319,24 @@ function copy(obj) {
     return JSON.parse(JSON.stringify(obj));
 }
 
-function drawComponents(components){
+function drawComponents(components) {
     for (var i = 0; i < components.length; i++) {
         var component = components[i];
 
         var points = component.points;
 
         drawCircle(ctx, component.station, {
-            color: 'green',
-            radius: 4
+            color: 'red',
+            radius: 8
         });
 
-        points.forEach(function(point) {
+        var color = getRandomColor();
+
+        points.forEach(function (point) {
             drawLine(ctx, component.station, point);
             drawCircle(ctx, point, {
-                color: 'red',
-                radius: 2
+                radius: 4,
+                color: color
             });
         });
 
@@ -133,7 +345,7 @@ function drawComponents(components){
 }
 
 function drawCircle(ctx, pos, params) {
-    var color = params && params.color || 'black';
+    var color = params && params.color || getRandomColor();
     var radius = params && params.radius || 3;
 
     ctx.fillStyle = color;
@@ -144,7 +356,7 @@ function drawCircle(ctx, pos, params) {
 }
 
 function drawText(ctx, pos, text) {
-    ctx.font = '20px Verdana';
+    ctx.font = '24px Verdana';
     ctx.fillStyle = 'black';
     ctx.fillText(text, pos.x - text.length * 10, pos.y - 20);
 }

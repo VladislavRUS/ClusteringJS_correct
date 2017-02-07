@@ -1,7 +1,7 @@
 (function () {
     this.util = {
         algorithmIterationsNumber: 50,
-        kmeans: function (k, volumes, stations) {
+        kmeans: function (k, volumes, stations, price) {
             var self = this;
 
             var minX = self.findMin(volumes, 'x');
@@ -58,15 +58,23 @@
                 components.push(component);
             }
 
-            return {
-                components: components,
-                distance: self.getDistance(components),
-                distanceWithWeight: self.getDistanceWithWeight(components),
-                freeDistance: self.getFreeDistance(components)
-            };
+            return this.getResults(components, price);
         },
 
-        projection: function (k, volumes, stations) {
+        getResults: function(components, price) {
+            var self = this;
+            
+            return {
+                components: components,
+                distance: self.getDistance(components, price),
+                distanceWithWeight: self.getDistanceWithWeight(components),
+                freeDistance: self.getFreeDistance(components),
+                numberOfClusters: components.length,
+                price: price || 0
+            }
+        },
+
+        projection: function (k, volumes, stations, price) {
             var self = this;
 
             var stationsCopy = JSON.parse(JSON.stringify(stations));
@@ -121,11 +129,7 @@
                 components.push(component);
             }
 
-            return {
-                components: components,
-                distance: self.getDistance(components),
-                distanceWithWeight: self.getDistanceWithWeight(components)
-            };
+            return this.getResults(components, price);
         },
 
         findMin: function (arr, param) {
@@ -152,8 +156,9 @@
             return max;
         },
 
-        getDistance: function (components) {
+        getDistance: function (components, price) {
             var self = this;
+            var p = price || 0;
 
             var distance = 0;
 
@@ -166,7 +171,7 @@
                 });
             });
 
-            return distance;
+            return components.length * p + distance;
         },
 
         getDistanceWithWeight: function(components) {

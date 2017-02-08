@@ -26,13 +26,12 @@ function process() {
     util.setNumericProperties(stations, ['latitude', 'longitude', 'x', 'y']);
     util.scaleCoordinates(stations, 0, canvas.width, canvas.height);
 
-    var iterations = 20;
-    var minClusters = 1, maxClusters = 20;
+    var iterations = 50;
+    var minClusters = 1, maxClusters = 25;
     var kmeansResults = [];
     var projectionResults = [];
-    var minPrice = 0, maxPrice = 1000;
 
-    var price = 0;
+    var price = 30000;
 
     var km = true;
 
@@ -63,11 +62,11 @@ function process() {
     }
 
 
-    /*kmeansResults = setAverage(kmeansResults, iterations);
+    kmeansResults = setAverage(kmeansResults, iterations);
     projectionResults = setAverage(projectionResults, iterations);
-    createChartWithPrice(kmeansResults, projectionResults, price);*/
+    createChartWithPrice(kmeansResults, projectionResults, price);
 
-    createChartWithoutWeight(kmeansResults, projectionResults);
+    //createChartWithoutWeight(kmeansResults, projectionResults);
     //createChartWithWeight(kmeansResults, projectionResults);
 
     //forChart('K-MEANS', kmeansComponents);
@@ -95,12 +94,14 @@ function setAverage(results, iterations) {
 
         var averageDistance = countAverage(chunk, 'distance'),
             averagePrice = countAverage(chunk, 'price'),
-            averageDistanceWithWeight = countAverage(chunk, 'distanceWithWeight');
+            averageDistanceWithWeight = countAverage(chunk, 'distanceWithWeight'),
+            averageFreeDistance = countAverage(chunk, 'freeDistance');
 
         arr.push({
             price: averagePrice,
             distance: averageDistance,
             distanceWithWeight: averageDistanceWithWeight,
+            freeDistance: averageFreeDistance,
             numberOfClusters: chunk[0].numberOfClusters
         });
     }
@@ -140,6 +141,17 @@ function forChart(algo, components) {
 }
 
 function createChartWithPrice(kmeansResults, projectionResults, price) {
+    var trace0 = {
+        x: kmeansResults.map(function (result) {
+            return result.numberOfClusters;
+        }),
+        y: kmeansResults.map(function (result) {
+            return result.freeDistance;
+        }),
+        name: 'Free, average: ' + countAverage(kmeansResults, 'freeDistance'),
+        type: 'scatter'
+    };
+
     var trace1 = {
         x: kmeansResults.map(function (result) {
             return result.numberOfClusters;
@@ -172,7 +184,24 @@ function createChartWithPrice(kmeansResults, projectionResults, price) {
         }
     };
 
-    Plotly.newPlot('chartWithoutWeight', [trace1, trace2], layout);
+    logTraces([trace0, trace1, trace2]);
+    Plotly.newPlot('chartWithoutWeight', [trace0, trace1, trace2], layout);
+}
+
+function logTraces(traces) {
+    traces.forEach(function(trace, idx) {
+        append('trace: ' + idx, true);
+
+        append('X: ', true);
+        trace.x.forEach(function(xCoord) {
+            append(xCoord + ', ', false);
+        });
+
+        append('Y: ', true);
+        trace.y.forEach(function(yCoord) {
+            append(yCoord + ', ', false);
+        });
+    });
 }
 
 function createChartWithoutWeight(kmeansResults, projectionResults) {
@@ -219,10 +248,23 @@ function createChartWithoutWeight(kmeansResults, projectionResults) {
         }
     };
 
+    logTraces([trace0, trace1, trace2]);
+
     Plotly.newPlot('chartWithoutWeight', [trace0, trace1, trace2], layout);
 }
 
 function createChartWithWeight(kmeansResults, projectionResults) {
+    var trace0 = {
+        x: kmeansResults.map(function (result) {
+            return result.numberOfClusters;
+        }),
+        y: kmeansResults.map(function (result) {
+            return result.freeDistance;
+        }),
+        name: 'Free, average: ' + countAverage(kmeansResults, 'freeDistance'),
+        type: 'scatter'
+    };
+
     var trace1 = {
         x: kmeansResults.map(function (result) {
             return result.numberOfClusters;
@@ -255,7 +297,9 @@ function createChartWithWeight(kmeansResults, projectionResults) {
         }
     };
 
-    Plotly.newPlot('chartWithWeight', [trace1, trace2], layout);
+    logTraces([trace0, trace1, trace2]);
+
+    Plotly.newPlot('chartWithWeight', [trace0, trace1, trace2], layout);
 }
 
 function logTheBest(divisions) {

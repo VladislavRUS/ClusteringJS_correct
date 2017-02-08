@@ -1,6 +1,6 @@
 (function () {
     this.util = {
-        algorithmIterationsNumber: 50,
+        algorithmIterationsNumber: 20,
         kmeans: function (k, volumes, stations, price) {
             var self = this;
 
@@ -10,16 +10,17 @@
             var maxY = self.findMax(volumes, 'y');
 
             var randomPoints = [];
+            var prevRandomPoints = [];
+
             for (var i = 0; i < k; i++) {
                 randomPoints.push(self.getRandomPosition(minX, maxX, minY, maxY));
             }
 
-            var cnt = 0;
-
             var clusters = {};
 
-            while (cnt < this.algorithmIterationsNumber) {
-                cnt++;
+            while (!this.arraysEqual(prevRandomPoints, randomPoints)) {
+                prevRandomPoints = copy(randomPoints);
+
                 clusters = {};
 
                 for (var i = 0; i < volumes.length; i++) {
@@ -61,6 +62,30 @@
             return this.getResults(components, price);
         },
 
+        arraysEqual: function(arr1, arr2) {
+            if (arr1.length !== arr2.length) {
+                return false;
+            }
+
+            for (var i = 0; i < arr1.length; i++) {
+                if (!this.arrayContains(arr2, arr1[i])) {
+                    return false;
+                }
+            }
+
+            return true;
+        },
+
+        arrayContains: function(arr, element) {
+            for (var i = 0; i < arr.length; i++) {
+                if (arr[i].x == element.x && arr[i].y == element.y) {
+                    return true;
+                }
+            }
+
+            return false;
+        },
+
         getResults: function(components, price) {
             var self = this;
             
@@ -68,7 +93,7 @@
                 components: components,
                 distance: self.getDistance(components, price),
                 distanceWithWeight: self.getDistanceWithWeight(components),
-                freeDistance: self.getFreeDistance(components),
+                freeDistance: self.getFreeDistance(components, price),
                 numberOfClusters: components.length,
                 price: price || 0
             }
@@ -80,6 +105,7 @@
             var stationsCopy = JSON.parse(JSON.stringify(stations));
 
             var randomStations = [];
+            var prevRandomStations = [];
 
             for (var i = 0; i < k; i++) {
                 var randomIdx = Math.floor(Math.random() * stationsCopy.length);
@@ -92,6 +118,7 @@
 
             while (cnt < this.algorithmIterationsNumber) {
                 cnt++;
+
                 clusters = {};
 
                 for (var i = 0; i < volumes.length; i++) {
@@ -191,9 +218,9 @@
             return distance;
         },
 
-        getFreeDistance: function (components) {
+        getFreeDistance: function (components, price) {
             var self = this;
-
+            var p = price || 0;
             var distance = 0;
 
             components.forEach(function (component) {
@@ -205,7 +232,7 @@
                 });
             });
 
-            return distance;
+            return distance + components.length * p;
         },
 
         findComponentCenter: function (arr) {
